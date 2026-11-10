@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "updated": "2026-11-11",
+  "note": "LeadPin Google Haritalar okuma kuralları. Google sayfa yapısını değiştirirse Kural Doktoru ile onarın; version otomatik artar.",
+  "min_app_version": "1.0.0",
+  "selectors": {
+    "feed": "div[role=\"feed\"]",
+    "result_link": "div[role=\"feed\"] a[href*=\"/maps/place/\"]",
+    "end_of_list": "span.HlvSq",
+    "place_title": "h1.DUwDvf",
+    "detail_ready": "button[data-item-id], a[data-item-id]",
+    "hours_button": "[aria-label=\"Haftalık çalışma saatlerini göster\"], [aria-label=\"Show open hours for the week\"]",
+    "title": "h1.DUwDvf",
+    "item_value": ".Io6YTe",
+    "category": "button.DkEaL",
+    "rating_box": "div.F7nice",
+    "phone": "button[data-item-id^=\"phone:tel:\"]",
+    "website": "a[data-item-id=\"authority\"]",
+    "address": "button[data-item-id=\"address\"]"
+  },
+  "consent_buttons": [
+    "Tümünü reddet",
+    "Reject all",
+    "Tümünü kabul et",
+    "Accept all"
+  ],
+  "block": {
+    "url_contains": [
+      "/sorry/"
+    ],
+    "selectors": [
+      "#captcha-form",
+      "form[action*='sorry']",
+      "iframe[src*='recaptcha']"
+    ],
+    "texts": [
+      "olağan dışı trafik",
+      "unusual traffic"
+    ]
+  },
+  "extract_js": "(S) => {\n  const q = (s, r = document) => { try { return s ? r.querySelector(s) : null; } catch (e) { return null; } };\n  const qa = (s, r = document) => { try { return s ? [...r.querySelectorAll(s)] : []; } catch (e) { return []; } };\n  const t = (el) => (el ? el.textContent.trim() : \"\");\n  const main = q('div[role=\"main\"]') || document;\n  const name = t(q(S.title)) || t(q('h1', main));\n\n  let phone = \"\";\n  const pb = q(S.phone);\n  if (pb) phone = t(q(S.item_value, pb)) || (pb.getAttribute('data-item-id') || '').replace('phone:tel:', '') ||\n    (pb.getAttribute('aria-label') || '').replace(/^[^:]*:\\s*/, '');\n\n  const wa = q(S.website);\n  const website = wa ? wa.href : \"\";\n\n  const ab = q(S.address);\n  const address = ab ? (t(q(S.item_value, ab)) || (ab.getAttribute('aria-label') || '').replace(/^[^:]*:\\s*/, '')) : \"\";\n\n  const category = t(q(S.category));\n\n  let rating = \"\", reviews = \"\";\n  const f7 = q(S.rating_box);\n  if (f7) {\n    rating = t(q('span[aria-hidden=\"true\"]', f7));\n    const rv = qa('span[aria-label]', f7).find(s => /yorum|review|değerlendirme/i.test(s.getAttribute('aria-label')));\n    if (rv) reviews = rv.getAttribute('aria-label') || t(rv);\n  }\n  if (!rating) {\n    const st = qa('[aria-label]', main).find(e => /yıldızlı|stars/i.test(e.getAttribute('aria-label')));\n    if (st) rating = (st.getAttribute('aria-label').match(/[\\d.,]+/) || [\"\"])[0];\n  }\n  if (!reviews) {\n    const el = qa('[aria-label]', main).find(e => /^[\\d.,]+\\s+(yorum|review)/i.test(e.getAttribute('aria-label')));\n    if (el) reviews = el.getAttribute('aria-label');\n  }\n\n  const DAY = /^(Pazartesi|Salı|Çarşamba|Perşembe|Cuma|Cumartesi|Pazar|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\\b/i;\n  const hours = qa('table tr', main).map(r => r.innerText.replace(/\\s+/g, ' ').trim()).filter(x => DAY.test(x)).join('; ');\n\n  let price = \"\";\n  const pe = qa('[aria-label]', main).find(e => /^(Fiyat|Price)/i.test(e.getAttribute('aria-label')));\n  if (pe) price = pe.getAttribute('aria-label').replace(/^[^:]*:\\s*/, '');\n\n  const txt = main.innerText || \"\";\n  const status = /Kalıcı olarak kapalı|Permanently closed/i.test(txt) ? \"Kalıcı olarak kapalı\"\n    : (/Geçici olarak kapalı|Temporarily closed/i.test(txt) ? \"Geçici olarak kapalı\" : \"\");\n\n  const unclaimed = qa('a, button', main).some(e =>\n    /sahibi (siz )?misiniz|işletmeyi sahiplen|claim this business|own this business/i.test((e.getAttribute('aria-label') || '') + ' ' + e.textContent));\n\n  return { name, phone, website, address, category, rating, reviews, hours, price, status, unclaimed };\n}"
+}
